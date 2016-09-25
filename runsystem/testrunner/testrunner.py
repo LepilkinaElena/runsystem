@@ -212,7 +212,7 @@ class TestRunner(object):
         }
         all_flags = opt_option + " " + mloptions + " -mllvm -print-features-before-all" + \
                     " -mllvm -print-features-after-all" + \
-                    " -mllvm -features-file features.output"
+                    " -mllvm -features-file=features.output"
         defs['CMAKE_C_FLAGS'] = self._unix_quote_args(all_flags)
         
         defs['CMAKE_CXX_FLAGS'] = self._unix_quote_args(all_flags)
