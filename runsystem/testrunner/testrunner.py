@@ -16,6 +16,69 @@ import datetime
 
 from optparse import OptionParser, OptionGroup
 
+class Profiler(object):
+    """
+    Base class for changable profiler modules.
+    """
+
+    def __init__(self):
+        self._log = None
+
+    def run(self, args):
+        raise RuntimeError("Abstract Method.")
+
+    def _run(self, log, args):
+        self._log = log
+        try:
+            return self.run(args)
+        finally:
+            self._log = None
+
+    def call(self, args, **kwargs):
+        if kwargs.get('shell', False):
+            cmdstr = args
+        else:
+            cmdstr = ' '.join(args)
+
+        if 'cwd' in kwargs:
+            print >>self._log, "# In working dir: " + kwargs['cwd']
+        print >>self.log, cmdstr
+
+        self._log.flush()
+        p = subprocess.Popen(args, stdout=self._log, stderr=self._log, **kwargs)
+        return p.wait()
+
+    @property
+    def log(self):
+        """Get the test log output stream."""
+        if self._log is None:
+            raise ValueError("log() unavailable outside test execution")
+        return self._log
+
+class CodeSizeCounter(object):
+    """
+    Base class for different classes for collecting code size.
+    """
+
+    def run(self):
+        raise RuntimeError("Abstract Method.")
+
+class LoopCodeSizeCounter(CodeSizeCounter):
+    def run(self, code_size_filename):
+        results = {}
+        with open(code_size_filename) as code_size_file:
+            for line in code_size_file.readlines():
+                offset = re.match(r'\[(\d+)\s*,\s*(\d+)\]\s*-\s*(\d+)')
+                if offset:
+                    value = int(offset.group(2)) - int(offset.group(1))
+                    if offset.group(3) in results:
+                        results[offset.group(3)] = results[offset.group(3)] + value
+                    else:
+                        results[offset.group(3)] = value
+        return results
+
+
+
 LOGGER_NAME = "runsystem.server.ui.app"
 
 def getLogger():
@@ -92,6 +155,28 @@ class TestRunner(object):
                          type=str, default=None,
                          help="Path to the C++ compiler to test (inferred from"
                               " --cc where possible")
+        group.add_option("", "--cppflags", type=str, action="append",
+                         dest="cppflags", default=[],
+                         help="Extra flags to pass the compiler in C or C++ mode. "
+                              "Can be given multiple times")
+        group.add_option("", "--cflags", type=str, action="append",
+                         dest="cflags", default=[],
+                         help="Extra CFLAGS to pass to the compiler. Can be "
+                              "given multiple times")
+        group.add_option("", "--cxxflags", type=str, action="append",
+                         dest="cxxflags", default=[],
+                         help="Extra CXXFLAGS to pass to the compiler. Can be "
+                              "given multiple times")
+        parser.add_option_group(group)
+
+        group = OptionGroup(parser, "Test selection")
+        group.add_option("", "--test-size", type='choice', dest="test_size",
+                         choices=['small', 'regular', 'large'], default='regular',
+                         help="The size of test inputs to use")
+        group.add_option("", "--only-test", dest="only_test", metavar="PATH",
+                         type=str, default=None,
+                         help="Only run tests under PATH")
+
         parser.add_option_group(group)
 
         group = OptionGroup(parser, "Test Execution")
@@ -116,9 +201,15 @@ class TestRunner(object):
         group.add_option("", "--use-cmake", dest="cmake", metavar="PATH",
                          type=str, default="cmake",
                          help="Path to CMake [cmake]")
-        group.add_option("", "--use-lit", dest="lit", metavar="PATH",
-                         type=str, default="llvm-lit",
-                         help="Path to the LIT test runner [llvm-lit]")
+        group.add_option("", "--use-make", dest="make", metavar="PATH",
+                         type=str, default="make",
+                         help="Path to Make [make]")
+        group.add_option("", "--use-profiler", dest="profiler",
+                         type=str, default="oprofile",
+                         help="Module with profiler run to get data")
+        group.add_option("", "--profiler-path", dest="profiler_path", metavar="PATH",
+                         type=str, default="",
+                         help="Path to used profiler")
         parser.add_option_group(group)
 
         (opts, args) = parser.parse_args(args)
@@ -149,10 +240,33 @@ class TestRunner(object):
         opts.cmake = resolve_command_path(opts.cmake)
         if not isexecfile(opts.cmake):
             parser.error("CMake tool not found (looked for %s)" % opts.cmake)
+        profilers_modules = self._scan_for_profilers()
+        if opts.profiler not in profilers_modules:
+            parser.error("Module for profiler %s not found" % opts.profiler)
+        if opts.profiler_path:
+            opts.profiler_path = resolve_command_path(opts.profiler_path)
+            if not isexecfile(opts.profiler_path):
+                parser.error("Profiler tool not found (looked for %s)" % opts.profiler_path)
 
-        opts.lit = resolve_command_path(opts.lit)
-        if not isexecfile(opts.lit):
-            parser.error("LIT tool not found (looked for %s)" % opts.lit)
+        if opts.only_test:
+            # --only-test can either point to a particular test or a directory.
+            # Therefore, test_suite_root + opts.only_test or
+            # test_suite_root + dirname(opts.only_test) must be a directory.
+            path = os.path.join(self.opts.test_suite_root, opts.only_test)
+            parent_path = os.path.dirname(path)
+            
+            if os.path.isdir(path):
+                opts.only_test = (opts.only_test, None)
+            elif os.path.isdir(parent_path):
+                opts.only_test = (os.path.dirname(opts.only_test),
+                                  os.path.basename(opts.only_test))
+            else:
+                parser.error("--only-test argument not understood (must be a " +
+                             " test or directory name)")
+
+        opts.cppflags = ' '.join(opts.cppflags)
+        opts.cflags = ' '.join(opts.cflags)
+        opts.cxxflags = ' '.join(opts.cxxflags)
 
         self.start_time = timestamp()
         ts = self.start_time.replace(' ', '_').replace(':', '-')
@@ -177,16 +291,16 @@ class TestRunner(object):
             mkdir_p(path)
             path_default = os.path.join(path, "default")
             mkdir_p(path_default)
-            self.run(path_default, option, self.opts.mloptions)
             path_mlopt = os.path.join(path, self.opts.mloptions)
             mkdir_p(path_mlopt)
-            self.run(path_mlopt)
+            self.run(path_default, option)
+            #self.run(path_mlopt, option, self.opts.mloptions)
 
-    def run(self, path, opt_option, mloptions):
+    def run(self, path, opt_option, mloptions = ""):
         self._configure(path, opt_option, mloptions)
         self._clean(path)
         self._make(path)
-        data = self._lit(path, test)
+        self._run_tests(path)
 
     def _unix_quote_args(self, s):
         return ' '.join(map(pipes.quote, shlex.split(s)))
@@ -200,6 +314,9 @@ class TestRunner(object):
     def _clean(self, path):
         make_cmd = "make"
         subdir = path
+        if self.opts.only_test:
+            components = [path] + [self.opts.only_test[0]]
+            subdir = os.path.join(*components)
         self._check_call([make_cmd, 'clean'],
                          cwd=subdir)
 
@@ -213,9 +330,15 @@ class TestRunner(object):
         all_flags = opt_option + " " + mloptions + " -mllvm -print-features-before-all" + \
                     " -mllvm -print-features-after-all" + \
                     " -mllvm -features-file=features.output"
-        defs['CMAKE_C_FLAGS'] = self._unix_quote_args(all_flags)
+        all_cflags = all_flags
+        all_cxx_flags = all_flags
+        if self.opts.cppflags or self.opts.cflags:
+            all_cflags = all_flags + ' ' + ' '.join([self.opts.cppflags, self.opts.cflags])
+        defs['CMAKE_C_FLAGS'] = self._unix_quote_args(all_cflags)
         
-        defs['CMAKE_CXX_FLAGS'] = self._unix_quote_args(all_flags)
+        if self.opts.cppflags or self.opts.cxxflags:
+            all_cxx_flags = all_flags + ' ' + ' '.join([self.opts.cppflags, self.opts.cxxflags])
+        defs['CMAKE_CXX_FLAGS'] = self._unix_quote_args(all_cxx_flags)
             
         lines = ['Configuring with {']
         for k, v in sorted(defs.items()):
@@ -237,7 +360,13 @@ class TestRunner(object):
         
         subdir = path
         target = 'all'
+        if self.opts.only_test:
+            components = [path] + [self.opts.only_test[0]]
+            if self.opts.only_test[1]:
+                target = self.opts.only_test[1]
+            subdir = os.path.join(*components)
         note('Building...')
+
         args = ["VERBOSE=1", target]
         self._check_call([make_cmd,
                           '-j', str(self.opts.threads)] + args,
@@ -266,3 +395,73 @@ class TestRunner(object):
             # failures!
             pass
         return json.loads(open(output_json_path.name).read())
+
+    def _scan_for_profilers(self):
+        base_profiler_modules_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../profilers')
+
+        # We follow links here because we want to support the ability for having
+        # various "suites" of LNTBased tests in separate repositories, and allowing
+        # users to just checkout them out elsewhere and link them into their LLVM
+        # test-suite source tree.
+        for dirpath,dirnames,filenames in os.walk(base_profiler_modules_path,
+                                                  followlinks = True):
+            # Check if this directory defines a test module.
+            if 'profiler.py' not in filenames:
+                continue
+
+            # If so, don't traverse any lower.
+            del dirnames[:]
+
+            # Add to the list of test modules.
+            assert dirpath.startswith(base_profiler_modules_path + '/')
+            yield dirpath[len(base_profiler_modules_path) + 1:]
+
+    def _run_tests(self, path):
+        for dirpath,dirnames,filenames in os.walk(path,
+                                                  followlinks = True):
+            if 'CMakeFiles' in dirnames:
+                dirnames.remove('CMakeFiles')
+            # Check if directory has executables:
+            for filename in filenames:
+                if isexecfile(os.path.join(dirpath, filename)):
+                    offset_file = os.path.join(dirpath, filename + ".functions.offset")
+                    # Single source.
+                    if os.path.isfile(offset_file):
+                        LoopCodeSizeCounter()._run(offset_file)
+
+
+    def _profile(self, profilers_modules):
+        locals = globals = {}
+        base_profiler_modules_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), '../profilers')
+        module_path = os.path.join(base_profiler_modules_path, 
+                                   profilers_modules[self.opts.profiler], 
+                                   'profiler.py')
+        module_file = open(module_path)
+        try:
+            exec module_file in locals, globals
+        except:
+            info = traceback.format_exc()
+            fatal("unable to import test module: %r\n%s" % (
+                    module_path, info))
+
+        profiler_class = globals.get('profiler_class')
+        if profiler_class is None:
+            fatal("no 'profiler_class' global in import profiler module: %r" % (
+                    module_path,))
+        try:
+            profiler_instance = profiler_class()
+        except:
+            info = traceback.format_exc()
+            fatal("unable to instantiate profiler class for: %r\n%s" % (
+                    module_path, info))
+
+        if not isinstance(profiler_instance, Profiler):
+            fatal("invalid test class (expected runsystem.testrunner.Profiler "
+                  "subclass) for: %r" % module_path)
+
+        try:
+            profiler._run()
+        except:
+            info = traceback.format_exc()
+            fatal("exception executing profiling for: %r\n%s" % (
+                    module_path, info))
