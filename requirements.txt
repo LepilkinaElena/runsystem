@@ -13,3 +13,5 @@ six==1.9.0
 wsgiref==0.1.2
 WTForms==2.0.2
 Flask-WTF==0.12
+elasticsearch==5.2.0
+elasticsearch_dsl==5.1.0

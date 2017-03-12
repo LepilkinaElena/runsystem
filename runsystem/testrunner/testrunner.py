@@ -15,6 +15,8 @@ import getpass
 import traceback
 import datetime
 
+import runsystem.db.data as data
+
 from optparse import OptionParser, OptionGroup
 
 class Profiler(object):
@@ -87,7 +89,8 @@ class LoopCodeSizeCounter(CodeSizeCounter):
                     offset = re.match(r'\[(\d+)\s*,\s*(\d+)\]\s*-\s*(\d+)', line)
                     if offset:
                         value = int(offset.group(2)) - int(offset.group(1))
-                        full_id = ".".join((application_name, base_filename, "loop.id", offset.group(3)))
+                        full_id = ".".join((application_name, base_filename,
+                                            "llvm.loop.id" + " " + offset.group(3)))
                         if full_id in results:
                             results[full_id] = results[full_id] + value
                         else:
@@ -109,6 +112,8 @@ def fatal(message):
 note = lambda message: getLogger().info(message)
 warning = lambda message: getLogger().warning(message)
 error = lambda message: getLogger().error(message)
+
+data.init_database()
 
 def resolve_command_path(name):
     """Try to make the name/path given into an absolute path to an
@@ -291,8 +296,8 @@ class TestRunner(object):
         opts.cxxflags = ' '.join(opts.cxxflags)
 
         self.start_time = timestamp()
-        ts = self.start_time.replace(' ', '_').replace(':', '-')
-        build_dir_name = "run-%s" % ts
+        self.ts = self.start_time.replace(' ', '_').replace(':', '-')
+        build_dir_name = "run-%s" % self.ts
 
         basedir = os.path.join(self.opts.sandbox_path, build_dir_name)
 
@@ -322,7 +327,7 @@ class TestRunner(object):
         self._configure(path, opt_option, mloptions)
         self._clean(path)
         self._make(path)
-        self._run_tests(path)
+        self._run_tests(path, ' '.join((opt_option, mloptions)).rstrip())
 
     def _unix_quote_args(self, s):
         return ' '.join(map(pipes.quote, shlex.split(s)))
@@ -447,7 +452,9 @@ class TestRunner(object):
                     run_line = re.match(r'RUN:\s*(.+)', line)
                     return run_line.group(1)
 
-    def _run_tests(self, path):
+    def _run_tests(self, path, options):
+        run = data.Run(date_time=self.ts, options=options)
+        run.save()
         for dirpath,dirnames,filenames in os.walk(path,
                                                   followlinks = True):
             if 'CMakeFiles' in dirnames:
@@ -456,16 +463,23 @@ class TestRunner(object):
             for filename in filenames:
                 if isexecfile(os.path.join(dirpath, filename)):
                     offset_file = os.path.join(dirpath, filename + ".functions.offset")
+                    features_output_file = os.path.join(dirpath, filename + ".features.output")
                     offset_files = []
+                    features_output_files = []
                     # Single source.
                     if os.path.isfile(offset_file):
                         offset_files.append(offset_file)
+                    if os.path.isfile(features_output_file):
+                        features_output_files.append(features_output_file)
                     # Multi sources.
                     else:
                         # All offset files are connected with application.
                         for inner_file in filenames:
                             if inner_file.endswith(".functions.offset"):
                                 offset_files.append(os.path.join(dirpath, inner_file))
+                            if inner_file.endswith(".features.output"):
+                                features_output_files.append(os.path.join(dirpath, inner_file))
+
                     test_file = os.path.join(dirpath, filename + ".test")
                     run_line = self._extract_run_line(test_file)
                     if run_line:
@@ -474,6 +488,49 @@ class TestRunner(object):
                         log_file = os.path.join(dirpath, filename + ".asm.oprof")
                         time_results = self._profile(log_file, run_line, filename, offset_files)
                         print(time_results)
+                        features = self._parse_features_output(features_output_files)
+                        self.save_results(run, features, code_size_results, time_results)
+
+
+    def _parse_features_output(self, output_files):
+        result = []
+        cur_json_string = ""
+        for output_filename in output_files:
+            with open(output_filename) as output:
+                for line in output.readlines():
+                    cur_json_string = cur_json_string + line.rstrip()
+                    if line.startswith("}"):
+                        result.append(cur_json_string)
+                        cur_json_string = ""
+        return result
+
+    def save_results(self, run, features, code_size_results, time_results):
+        typed_features = {}
+        # Save static features.
+        for features_set in features:
+            features_instance, typed_instance = data.FeaturesFactory.createFeatures(features_set)
+            features_instance.save()
+            typed_instance.features_id = features_instance.meta.id
+            if not typed_instance.block_id in typed_features:
+                typed_features[typed_instance.block_id] = []
+            typed_features[typed_instance.block_id].append(typed_instance)
+        for key, value in time_results.iteritems():
+            keys_parts = key.split('.')
+            function = data.Function(application = keys_parts.pop(0),
+                                     filename = keys_parts.pop(0), 
+                                     function_name = value[0])
+            function.save()
+            block_id = '.'.join(keys_parts)
+            block = data.Loop(loop_id = block_id, 
+                              run_id = run.meta.id, 
+                              exec_time = value[1],
+                              function_id = function.meta.id)
+            if key in code_size_results:
+                block.code_size = code_size_results[key]
+                block.save()
+                for cur_feature in typed_features[block_id]:
+                    cur_feature.block_id = block.meta.id
+                    cur_feature.save()
 
     def _profile(self, log_file, run_line, application, offset_files):
         locals = globals = {}
@@ -482,7 +539,6 @@ class TestRunner(object):
         module_path = os.path.join(base_profiler_modules_path, 
                                    self.opts.profiler, 
                                    'profiler.py')
-        print(module_path)
         module_file = open(module_path)
         try:
             exec module_file in locals, globals

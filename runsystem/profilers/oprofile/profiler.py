@@ -66,7 +66,8 @@ class Oprofile(Profiler):
                         offset = re.match(r'\[(\d+)\s*,\s*(\d+)\]\s*-\s*(\d+)', line)
                         if offset:
                             offset_value = int(offset.group(2)) - int(offset.group(1))
-                            full_id = ".".join((self._application, base_filename, "loop.id", offset.group(3)))
+                            full_id = ".".join((self._application, base_filename, 
+                                                "llvm.loop.id" + " " + offset.group(3)))
                             # Find the same part in disassembler.
                             time = self._get_time_for_block(assembly_lines, current_function,
                                                             int(offset.group(1)), int(offset.group(2)))
