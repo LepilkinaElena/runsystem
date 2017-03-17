@@ -9,27 +9,30 @@ class Oprofile(Profiler):
     def _count_instruction_offset_and_time(self, line, prev_address):
         time = 0
         offset = 0
+
         code_line = re.match(r'\s*(\d+)?\s+(\d+\.\d+.*)?\s*:\s*([0-9a-fA-F]+):\s*(\w+)',
                              line)
         if not code_line:
+            print(prev_address)
+            print(line)
             raise SystemExit("wrong format for profiler file")
         if code_line.group(1):
             time = int(code_line.group(1))
         cur_address = int(code_line.group(3), 16)
+        instr_size = int(code_line.group(3), 16) - prev_address
         # FIX ME: check nop and jump instructions.
         if code_line.group(4).startswith("nop"):
             offset = 0
-        elif code_line.group(4).startswith("j"):
-            offset = 2
         else:
-            offset = int(code_line.group(3), 16) - prev_address
-        return (cur_address, offset, time)
+            offset = 1
+        return (cur_address, offset, time, instr_size)
 
-    def _get_time_for_block(self, assembly_lines, function_name, offset_start, offset_end):
+    def _get_metrics_for_block(self, assembly_lines, function_name, offset_start, offset_end):
         start_address = None
         is_block_start_found = False
-        offset = 0
-        value = 0
+        time_value = 0
+        code_size_value = 0
+        cur_instr_num = 0
         for assembly_line in assembly_lines:
             if not start_address:
                 function_header = re.match(r'([0-9a-fA-F]+)\s*<' + 
@@ -38,18 +41,21 @@ class Oprofile(Profiler):
                 if function_header:
                     start_address = function_header.group(1)
                     prev_address = int(start_address, 16)
+                    cur_instr_num = 0
             else:
                 # Find start of block.
-                prev_address, cur_offset, time = self._count_instruction_offset_and_time(assembly_line, prev_address)
-                offset = offset + cur_offset
+                prev_address, cur_offset, time, prev_instr_size = self._count_instruction_offset_and_time(assembly_line, prev_address)
                 if not is_block_start_found:
-                    if offset >= offset_start:
+                    if cur_instr_num == offset_start:
                         is_block_start_found = True
-                        value = time
+                        time_value = time
                 else:
-                    value = value + time
-                    if offset >= offset_end:
-                        return value
+                    if cur_instr_num < offset_end:
+                        time_value = time_value + time
+                    code_size_value = code_size_value + prev_instr_size
+                    if cur_instr_num == offset_end:
+                        return (time_value, code_size_value)
+                cur_instr_num = cur_instr_num + cur_offset
 
     def _count(self, offset_files):
         results = {}
@@ -69,13 +75,14 @@ class Oprofile(Profiler):
                             full_id = ".".join((self._application, base_filename, 
                                                 "llvm.loop.id" + " " + offset.group(3)))
                             # Find the same part in disassembler.
-                            time = self._get_time_for_block(assembly_lines, current_function,
-                                                            int(offset.group(1)), int(offset.group(2)))
-                            if time:
+                            metrics = self._get_metrics_for_block(assembly_lines, current_function, int(offset.group(1)), int(offset.group(2)))
+                            if metrics:
+                                time, code_size = metrics
                                 if full_id in results:
-                                    results[full_id] = (current_function, results[full_id][1] + time)
+                                    results[full_id] = (current_function, results[full_id][1] + time,
+                                                        results[full_id][2] + code_size)
                                 else:
-                                    results[full_id] = (current_function, time)
+                                    results[full_id] = (current_function, time, code_size)
                         else:
                             # Function name.
                             current_function = line.rstrip()

@@ -483,13 +483,13 @@ class TestRunner(object):
                     test_file = os.path.join(dirpath, filename + ".test")
                     run_line = self._extract_run_line(test_file)
                     if run_line:
-                        code_size_results = LoopCodeSizeCounter().run(offset_files, filename)
-                        print(code_size_results)
+                        #code_size_results = LoopCodeSizeCounter().run(offset_files, filename)
+                        #print(code_size_results)
                         log_file = os.path.join(dirpath, filename + ".asm.oprof")
                         time_results = self._profile(log_file, run_line, filename, offset_files)
-                        print(time_results)
+                        #print(time_results)
                         features = self._parse_features_output(features_output_files)
-                        self.save_results(run, features, code_size_results, time_results)
+                        self.save_results(run, features, time_results)
 
 
     def _parse_features_output(self, output_files):
@@ -504,7 +504,7 @@ class TestRunner(object):
                         cur_json_string = ""
         return result
 
-    def save_results(self, run, features, code_size_results, time_results):
+    def save_results(self, run, features, time_results):
         typed_features = {}
         # Save static features.
         for features_set in features:
@@ -524,13 +524,13 @@ class TestRunner(object):
             block = data.Loop(loop_id = block_id, 
                               run_id = run.meta.id, 
                               exec_time = value[1],
+                              code_size = value[2],
                               function_id = function.meta.id)
-            if key in code_size_results:
-                block.code_size = code_size_results[key]
-                block.save()
-                for cur_feature in typed_features[block_id]:
-                    cur_feature.block_id = block.meta.id
-                    cur_feature.save()
+            print("%s, %s, %s" % (key, value[1], value[2]))
+            block.save()
+            for cur_feature in typed_features[block_id]:
+                cur_feature.block_id = block.meta.id
+                cur_feature.save()
 
     def _profile(self, log_file, run_line, application, offset_files):
         locals = globals = {}
