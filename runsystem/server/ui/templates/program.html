@@ -1,0 +1,34 @@
+{% import "utils.html" as utils %}
+{% extends "layout.html" %}
+{% set components = [] %}
+{% block title %}Overview{% endblock %}
+{% block body %}
+{# Display available test result suites. #}
+<h3>Program {{program}}</h3>
+<section id="functions">
+{{ utils.render_popup_begin('functions', 'Functions', false) }}
+<table class="table table-striped table-hover table-condensed sortable">
+  <thead>
+    <tr>
+      <th rowspan="1" class="sorttable_nosort"><input type="checkbox" id="select-all-runs" onClick="selectAll(this)"></th>
+      <th rowspan="1">Function</th>
+    </tr>
+  </thead>
+  <tbody class="searchable">
+
+    {% for function in functions %}
+      <tr>
+        <td><input type="checkbox" name="plot.{{function.meta.id}}" value="{{function.meta.id}}"></td>
+        <td class="benchmark-name">
+          <a href="{{ url_for('function', id=function.meta.id) }}">
+            {{ function.function_name }}
+          </a>
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+  </table>
+  {{ utils.render_popup_end() }}
+</section>
+
+{% endblock %}

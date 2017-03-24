@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <link href="{{ url_for('.static', filename='bootstrap/css/bootstrap.min.css')
+              }}" rel="stylesheet" media="screen"/>
+  <link href="{{ url_for('.static', filename='bootstrap/css/bootstrap-responsive.min.css')
+              }}" rel="stylesheet"/>
+  <link href="{{ url_for('.static', filename='narrow.css')
+              }}" rel="stylesheet" media='screen and (max-width: 750px)'/>
+  <link href="{{ url_for('.static', filename='wide.css')
+              }}" rel="stylesheet" media='screen and (min-width: 750px)'/>
+  <script src="{{ url_for('.static', filename='jquery/1.7.2/jquery-1.7.2.min.js')
+               }}"> </script>
+  <script src="{{ url_for('.static', filename='jquery/jquery.dateFormat/jquery-dateFormat.min.js')
+               }}"> </script>
+
+  <script src="{{ url_for('.static', filename='bootstrap/js/bootstrap.min.js')
+               }}"></script>
+  <script src="{{ url_for('.static', filename='timedate.js')
+               }}"></script>
+
+  <!-- DataTables CSS -->
+  <link rel="stylesheet" type="text/css" href="//cdn.datatables.net/1.10.8/css/jquery.dataTables.css" />
+                 
+   <!-- DataTables -->
+   <script type="text/javascript" charset="UTF-8" src="//cdn.datatables.net/1.10.8/js/jquery.dataTables.js">
+   </script>
+
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+
+  <style type="text/css">
+    /* Sticky footer styles ------------------------------------------------- */
+    html,
+    body {
+      height: 100%;
+      /* The html and body elements cannot have any padding or margin. */
+    }
+
+    /* Wrapper for page content to push down footer */
+    #wrap {
+      min-height: 100%;
+      height: auto !important;
+      height: 100%;
+      /* Negative indent footer by it's height */
+      margin: 0 auto -60px;
+    }
+
+    /*Set the fixed height of the header and footer here */
+
+    #footer {
+      background-color: #f5f5f5;
+    }
+
+    /* Offset Navbar items away from window corner */
+    #push,
+    #runsystem-instance { margin-left:20px; }
+    #dbselect { margin-right : 20px; }
+    {% if nosidebar is defined %}
+        #page-content { margin-left:20px; width:100%}
+    {% endif %}
+    /* Lastly, apply responsive CSS fixes as necessary */
+    @media (max-width: 767px) {
+      #footer {
+        margin-left: -20px;
+        margin-right: -20px;
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+    }
+
+    /* Make profile buttons invisible by default */
+    tr .profile-btn {
+      visibility: hidden;
+    }
+
+    /* But appear when their parent table rows are hovered. */
+    tr:hover .profile-btn {
+      visibility: visible;
+    }
+
+    .navbar-fixed-top {
+      background-color: #5427c9;
+      border-color: #684be5;
+    }
+    .navbar-fixed-top .brand {
+      color: #e9f2f4;
+    }
+    .navbar-fixed-top .brand:hover,
+    .navbar-fixed-top .brand:focus {
+      color: #f2f2f7;
+    }
+    .navbar-fixed-top .text {
+      color: #e9f2f4;
+    }
+    .navbar-fixed-top .nav > li > a {
+      color: #e9f2f4;
+    }
+    .navbar-fixed-top .nav > li > a:hover,
+    .navbar-fixed-top .nav > li > a:focus {
+      color: #f2f2f7;
+    }
+    .navbar-fixed-top .nav > .active > a,
+    .navbar-fixed-top .nav > .active > a:hover,
+    .navbar-fixed-top .nav > .active > a:focus {
+      color: #f2f2f7;
+      background-color: #684be5;
+    }
+    .navbar-fixed-top .nav > .open > a,
+    .navbar-fixed-top .nav > .open > a:hover,
+    .navbar-fixed-top .nav > .open > a:focus {
+      color: #f2f2f7;
+      background-color: #684be5;
+    }
+    .navbar-fixed-top .toggle {
+      border-color: #684be5;
+    }
+    .navbar-fixed-top .toggle:hover,
+    .navbar-fixed-top .toggle:focus {
+      background-color: #684be5;
+    }
+    .navbar-fixed-top .toggle .icon-bar {
+      background-color: #e9f2f4;
+    }
+    .navbar-fixed-top .collapse,
+    .navbar-fixed-top .form {
+      border-color: #e9f2f4;
+    }
+    .navbar-fixed-top .link {
+      color: #e9f2f4;
+    }
+    .navbar-fixed-top .link:hover {
+      color: #f2f2f7;
+    }
+
+    @media (max-width: 767px) {
+      .navbar-fixed-top .nav .open .dropdown-menu > li > a {
+        color: #e9f2f4;
+      }
+      .navbar-fixed-top .nav .open .dropdown-menu > li > a:hover,
+      .navbar-fixed-top .nav .open .dropdown-menu > li > a:focus {
+        color: #f2f2f7;
+      }
+      .navbar-fixed-top .nav .open .dropdown-menu > .active > a,
+      .navbar-fixed-top .nav .open .dropdown-menu > .active > a:hover,
+      .navbar-fixed-top .nav .open .dropdown-menu > .active > a:focus {
+        color: #f2f2f7;
+        background-color: #684be5;
+      }
+    }
+    
+  </style>
+
+  <link rel="icon" type="image/png" href="{{ url_for('.static', filename='favicon.ico') }}"/>
+
+  <title>
+    {{old_config.name}}{% for short_name,_ in components %} : {{short_name}}{% endfor %} - {{ self.title() }}
+  </title>
+
+  {% block head %}
+  {% endblock %}
+
+  <script type='text/javascript'>
+    {% block javascript %}
+    {% endblock %}
+  </script>
+</head>
+
+{% set base_url=old_config.zorgURL %}
+
+{% if self.onload is defined %}
+<body onload="{{ self.onload() }}">
+{% else %}
+<body data-spy="scroll" data-target="#side-bar">
+{% endif %}
+    {# Top-Level Content (non-footer) #}
+    <div id="wrap">
+        {# Page Header #}
+        <div id="header" class="navbar navbar-fixed-top">
+                <div id="runsystem-instance">
+                    <a class="brand" href="{{url_for('index')}}">Runsystem</a>
+                </div>
+
+                <ul class="nav">
+                    <li class="toggle" role="presentation">
+                        <a href="#">Runs </a>
+                    </li>
+                    <li class="toggle" role="presentation">
+                        <a href="#">Programs </a>
+                    </li>
+                </ul>
+
+        </div>
+
+        {# Include any database log, if present. #}
+        {% if g.db_log is defined %}
+        <div class="alert alert-info">
+          <h4>SQL Log</h4>
+          <pre>{{g.db_log.getvalue()}}</pre>
+        </div>
+        {% endif %}
+        
+
+        {# Page Content #}
+        <div id="content" class="container-fluid">
+            <div id="errors"></div>
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <div class="{{ category }}" role="alert">
+                            {{ message }}  <a href="#" class="close" data-dismiss="alert" aria-label="close">&times;</a>
+                        </div>
+                        {% endfor %}
+                {% endif %}
+            {% endwith %} 
+        
+            {% if nosidebar is defined %}
+                <div class="row">
+                    <div id="page-content" class="span12">
+            {% else %}
+                <div id ="side-bar" class="span3 bs-docs-sidebar ">
+                 {% block sidebar %}{% endblock %} 
+                </div>
+                    <div id="page-content" class="span9">
+            {% endif %}
+          
+                        {% block body %}{% endblock %}
+                    </div>
+                {% if nosidebar is defined %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        {# Force space for footer #}
+        <div id="push"></div>
+
+        {# Page Footer #}
+        <div id="footer">
+            <div class="container">
+              <table class="table">
+                <tr>
+                  <td>Version: {{ app.version }}</td>
+                </tr>
+              </table>
+            </div>
+        </div>
+
+</body>
+</html>

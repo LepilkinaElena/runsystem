@@ -1,0 +1,36 @@
+{% import "utils.html" as utils %}
+{% extends "layout.html" %}
+{% set components = [] %}
+{% block title %}Overview{% endblock %}
+{% block body %}
+{# Display available test result suites. #}
+<h3>Last runs</h3>
+<section id="runs">
+{{ utils.render_popup_begin('runs', 'Runs', false) }}
+<table class="table table-striped table-hover table-condensed sortable">
+  <thead>
+    <tr>
+      <th rowspan="1" class="sorttable_nosort"><input type="checkbox" id="select-all-runs" onClick="selectAll(this)"></th>
+      <th rowspan="1">Run</th>
+      <th>Options</th>
+    </tr>
+  </thead>
+  <tbody class="searchable">
+
+    {% for run in runs %}
+      <tr>
+        <td><input type="checkbox" name="plot.{{run.meta.id}}" value="{{run.meta.id}}"></td>
+        <td class="benchmark-name">
+          <a href="{{ url_for('run', id=run.meta.id) }}">
+            {{ run.date_time }}
+          </a>
+        </td>
+        <td> {{ run.options }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+  </table>
+  {{ utils.render_popup_end() }}
+</section>
+
+{% endblock %}

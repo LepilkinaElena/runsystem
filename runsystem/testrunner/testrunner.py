@@ -517,16 +517,16 @@ class TestRunner(object):
         for key, value in time_results.iteritems():
             keys_parts = key.split('.')
             function = data.Function(application = keys_parts.pop(0),
+                                     run_id = run.meta.id, 
                                      filename = keys_parts.pop(0), 
                                      function_name = value[0])
             function.save()
             block_id = '.'.join(keys_parts)
             block = data.Loop(loop_id = block_id, 
-                              run_id = run.meta.id, 
                               exec_time = value[1],
                               code_size = value[2],
                               function_id = function.meta.id)
-            print("%s, %s, %s" % (key, value[1], value[2]))
+            #print("%s, %s, %s" % (key, value[1], value[2]))
             block.save()
             for cur_feature in typed_features[block_id]:
                 cur_feature.block_id = block.meta.id

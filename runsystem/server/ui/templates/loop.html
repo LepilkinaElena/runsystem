@@ -1,0 +1,48 @@
+{% import "utils.html" as utils %}
+{% extends "layout.html" %}
+{% set components = [] %}
+{% block title %}Overview{% endblock %}
+{% block body %}
+{# Display available test result suites. #}
+<h3>Loop {{loop.loop_id}}</h3>
+<section id="features">
+{{ utils.render_popup_begin('features', 'Loop Features', false) }}
+<table class="table table-striped table-hover table-condensed sortable">
+  <thead>
+    <tr>
+      <th rowspan="1">Pass</th>
+      <th rowspan="1">Place</th>
+      <th rowspan="1">numIVUsers</th>
+      <th rowspan="1">isLoopSimplifyForm</th>
+      <th rowspan="1">isEmpty</th>
+      <th rowspan="1">numIntToFloatCast</th>
+      <th rowspan="1">hasLoopPreheader</th>
+      <th rowspan="1">numTermBrBlocks</th>
+      <th rowspan="1">latchBlockTermOpcode</th>
+    </tr>
+  </thead>
+  <tbody class="searchable">
+
+    {% for features in features_sets %}
+      <tr>
+        <td rowspan="2" class="benchmark-name">
+            {{ features[0].pass_name }}
+        </td>
+        {% for i in [0,1] %}
+        <td>{{features[i].place}}</td>
+        <td>{{features[i].features_set.numIVUsers}}</td>
+        <td>{{features[i].features_set.isLoopSimplifyForm}}</td>
+        <td>{{features[i].features_set.isEmpty}}</td>
+        <td>{{features[i].features_set.numIntToFloatCast}}</td>
+        <td>{{features[i].features_set.hasLoopPreheader}}</td>
+        <td>{{features[i].features_set.numTermBrBlocks}}</td>
+        <td>{{features[i].features_set.latchBlockTermOpcode}}</td>
+        </tr>
+        {% endfor %}
+    {% endfor %}
+  </tbody>
+  </table>
+  {{ utils.render_popup_end() }}
+</section>
+
+{% endblock %}

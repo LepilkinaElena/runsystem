@@ -1,0 +1,44 @@
+{% import "utils.html" as utils %}
+{% extends "layout.html" %}
+{% set components = [] %}
+{% block title %}Overview{% endblock %}
+{% block body %}
+{# Display available test result suites. #}
+<h3>Run {{run.date_time}}</h3>
+
+<section id="programs">
+{{ utils.render_popup_begin('programs', 'Programs', false) }}
+<table class="table table-striped table-hover table-condensed sortable">
+  <thead>
+    <tr>
+      <th rowspan="1" class="sorttable_nosort"><input type="checkbox" id="select-all-runs" onClick="selectAll(this)"></th>
+      <th rowspan="1">Program</th>
+      <th>Files</th>
+    </tr>
+  </thead>
+  <tbody class="searchable">
+
+    {% for application_name, filenames in applications.iteritems() %}
+      <tr>
+        <td><input type="checkbox" name="plot.{{run.meta.id}}" value="{{run.meta.id}}"></td>
+        <td class="benchmark-name">
+          <a href="{{ url_for('program', name=application_name, id=run.meta.id) }}">
+            {{ application_name }}
+          </a>
+        </td>
+        <td> 
+        <ul>
+          {% for filename in filenames %}
+            <li>{{filename}}</li>
+          {% endfor %}
+        </ul>
+        
+        </td>
+      </tr>
+    {% endfor %}
+  </tbody>
+  </table>
+  {{ utils.render_popup_end() }}
+</section>
+
+{% endblock %}

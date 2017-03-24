@@ -2,7 +2,9 @@ import runsystem
 import json
 
 from datetime import datetime
-from elasticsearch_dsl import DocType, Integer, Keyword, Text, InnerObjectWrapper, Nested, Boolean
+from elasticsearch_dsl import DocType, Integer, Keyword, Text
+from elasticsearch_dsl import InnerObjectWrapper, Nested, Boolean
+from elasticsearch_dsl import FacetedSearch, TermsFacet
 from elasticsearch_dsl.connections import connections
 
 class FeaturesFactory(object):
@@ -72,6 +74,7 @@ class Function(DocType):
     application = Keyword()
     filename = Keyword()
     function_name = Keyword()
+    run_id = Keyword()
 
     class Meta:
         index = 'runsystemdb'
@@ -93,7 +96,6 @@ class Run(DocType):
 class Loop(DocType):
     """Database entity for loop."""
     loop_id = Keyword()
-    run_id = Keyword()
     exec_time = Integer()
     code_size = Integer()
     function_id = Keyword()
@@ -104,9 +106,49 @@ class Loop(DocType):
     def save(self, ** kwargs):
         return super(Loop, self).save(** kwargs)
 
+class ApplicationSearch(FacetedSearch):
+    index = 'runsystemdb'
+    doc_types = [Function, ]
+    fields = ['application', 'filename', 'function_name']
+
+    facets = {
+        'tags': TermsFacet(field='application')
+    }
+
+    def __init__(self, run_id):
+        self.run_id = run_id
+        super(ApplicationSearch, self).__init__()
+        
+
+    def search(self):
+        s = super(ApplicationSearch, self).search()
+        return s.query("match", run_id=self.run_id)
+
+class FilenameSearch(FacetedSearch):
+    index = 'runsystemdb'
+    doc_types = [Function, ]
+    fields = ['application', 'filename', 'function_name']
+
+    facets = {
+        'tags': TermsFacet(field='filename')
+    }
+
+    def __init__(self, application):
+        self.application = application
+        super(FilenameSearch, self).__init__()
+        
+
+    def search(self):
+        s = super(FilenameSearch, self).search()
+        return s.query("match", application=self.application)
+
 
 def init_database():
     # Define a default Elasticsearch client
     connections.create_connection(hosts=['localhost'])
     # Create the mappings in Elasticsearch
     Run.init()
+    Function.init()
+    Features.init()
+    Loop.init()
+    LoopFeatures.init()
