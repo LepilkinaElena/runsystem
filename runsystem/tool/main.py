@@ -8,6 +8,7 @@ from optparse import OptionParser, OptionGroup
 import contextlib
 import runsystem.util.multitool
 from runsystem.testrunner.testrunner import TestRunner, LOGGER_NAME
+from runsystem.db.reportgenerator import ExcelReportGenerator
 
 def action_runserver(name, args):
     """start a new development server"""
@@ -86,11 +87,15 @@ def action_runtest(name, args):
     logger.addHandler(handler)
     runner = TestRunner()
 
-    server_results = runner.run_test('%s' % (name), args)
-    if server_results.get('result_url'):
-        print "Results available at:", server_results['result_url']
-    else:
-        print "Results available at: no URL available"
+def action_get_excel_report(name, args):
+    parser = OptionParser("%s [options]" % name)
+    parser.add_option("-o", "--output", dest="output", type=str, default=None)
+    (opts, args) = parser.parse_args(args)
+    if len(args) != 0:
+        parser.error("invalid number of arguments")
+    if not opts.output:
+        parser.error("output file is nessecary")
+    ExcelReportGenerator().get_report(opts.output)
 
 tool = runsystem.util.multitool.MultiTool(locals())
 
