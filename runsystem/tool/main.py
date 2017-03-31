@@ -86,6 +86,7 @@ def action_runtest(name, args):
             datefmt='%Y-%m-%d %H:%M:%S'))
     logger.addHandler(handler)
     runner = TestRunner()
+    runner.run_test('%s' % (name), args)
 
 def action_get_excel_report(name, args):
     parser = OptionParser("%s [options]" % name)

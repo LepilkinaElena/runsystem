@@ -82,6 +82,24 @@ class Function(DocType):
     def save(self, ** kwargs):
         return super(Function, self).save(** kwargs)
 
+    @staticmethod
+    def get_ot_create_function(application, run_id, filename, function_name):
+        search = Function.search().query('match', run_id=run_id).\
+                                   query('match', application=application).\
+                                   query('match', filename=filename).\
+                                   query('match', function_name=function_name)
+
+        response = search.execute()
+        if response.success() and len(response):
+            print(response)
+            return response[0]
+        function = Function(application = application,
+                                 run_id = run_id, 
+                                 filename = filename, 
+                                 function_name = function_name)
+        function.save()
+        return function
+
 class Run(DocType):
     """Database entity for run of system."""
     options = Text()

@@ -516,11 +516,11 @@ class TestRunner(object):
             typed_features[typed_instance.block_id].append(typed_instance)
         for key, value in time_results.iteritems():
             keys_parts = key.split('.')
-            function = data.Function(application = keys_parts.pop(0),
-                                     run_id = run.meta.id, 
-                                     filename = keys_parts.pop(0), 
-                                     function_name = value[0])
-            function.save()
+
+            function = data.Function.get_ot_create_function(application = keys_parts.pop(0),
+                                                   run_id = run.meta.id, 
+                                                   filename = keys_parts.pop(0), 
+                                                   function_name = value[0])
             block_id = '.'.join(keys_parts)
             block = data.Loop(loop_id = block_id, 
                               exec_time = value[1],
