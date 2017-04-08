@@ -20,7 +20,7 @@ class Oprofile(Profiler):
             time = int(code_line.group(1))
         cur_address = int(code_line.group(3), 16)
         instr_size = int(code_line.group(3), 16) - prev_address
-        # FIX ME: check nop and jump instructions.
+        # FIX ME: check nop.
         if code_line.group(4).startswith("nop"):
             offset = 0
         else:
@@ -111,8 +111,7 @@ class Oprofile(Profiler):
 
         # operf -e CPU_CLK_UNHALTED:100000:0:0:1 --callgraph [run_line]
         cmd = [operf_command, '-e', 
-               ":".join((opts.counter, str(opts.count_num), "0:1:1")),
-               "--callgraph"]
+               ":".join((opts.counter, str(opts.count_num), "0:0:1"))]
         cmd.extend(self._run_line.split())
         subprocess.check_call(cmd)
 

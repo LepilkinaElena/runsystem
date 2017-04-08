@@ -7,6 +7,7 @@
       <div id="{{id}}-collapse" class="accordion-body {{ 'collapse' if hidden else 'collapse in' }}">
         <div class="accordion-inner">
 {%- endmacro %}
+
 {% macro render_popup_end() -%}
         </div>
       </div>
@@ -14,3 +15,43 @@
   </div>
 {%- endmacro %}
 
+{% macro render_sidebar(connected_run, closest_runs) -%}
+
+  <h4>Connected run:</h4>
+  {% if connected_run %}
+  <a href="{{url_for('run', id=connected_run.meta.id)}}">Run {{connected_run.date_time}}
+    <br>Options: {{connected_run.options}}</a>
+  {% endif %}
+  <h4>Closest runs:</h4>
+
+  <ul>
+  {# Show closest runs. #}
+  {% for r in closest_runs %}
+    <li>
+      <a href="{{url_for('run', id=r.meta.id)}}">Run {{r.date_time}}
+        <br>Options: {{r.options}}</a>
+    </li>
+  {% endfor %}
+  </ul>
+  <br>
+  {# Show runs to compare. #}
+    <h4>Compare to:</h4>
+    <ul>
+    <h4>Connected run:</h4>
+    {% if connected_run %}
+    <a href="{{add_compare_to(connected_run.meta.id)}}">Run {{connected_run.date_time}}
+      <br>Options: {{connected_run.options}}</a>
+    {% endif %}
+    <h4>Closest runs:</h4>
+    <ul>
+    {# Show closest runs. #}
+    {% for r in closest_runs %}
+      <li>
+        <a href="{{add_compare_to(r.meta.id)}}">Run {{r.date_time}}
+          <br>Options: {{r.options}}</a>
+      </li>
+    {% endfor %}
+    </ul>
+    </ul>
+
+{%- endmacro %}

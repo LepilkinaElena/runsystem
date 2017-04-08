@@ -1,7 +1,26 @@
 {% import "utils.html" as utils %}
 {% extends "layout.html" %}
 {% set components = [] %}
+{% set compare_to = request_info.compare_to %}
+{% set connected_run = request_info.connected_run %}
+{% set current_run = request_info.current_run %}
+{% set closest_runs = request_info.closest_runs %}
+{% block head %}
+<style type="text/css">
+  p {
+    font-style: italic;
+    font-size: 12px;
+    font-weight: normal;
+  }
+  .table thead th {
+    vertical-align: middle;
+  }
+</style>
+{% endblock %}
 {% block title %}Overview{% endblock %}
+{% block sidebar %}
+{{ utils.render_sidebar(connected_run, closest_runs) }}
+{% endblock %}
 {% block body %}
 {# Display available test result suites. #}
 <h3>Program {{program}}</h3>
@@ -12,6 +31,10 @@
     <tr>
       <th rowspan="1" class="sorttable_nosort"><input type="checkbox" id="select-all-runs" onClick="selectAll(this)"></th>
       <th rowspan="1">Function</th>
+      {% if compare_to %}
+        <th>{{current_run.options}}<br><p>(Current run)</p></th>
+        <th>{{compare_to.options}}<br><p>(Compare to run)</p></th>
+      {% endif %}
     </tr>
   </thead>
   <tbody class="searchable">
@@ -20,10 +43,27 @@
       <tr>
         <td><input type="checkbox" name="plot.{{function.meta.id}}" value="{{function.meta.id}}"></td>
         <td class="benchmark-name">
+        {% if compare_to %}
+          <a href="{{ url_for('function', id=function.meta.id, compare_to=compare_to.meta.id) }}">
+        {% else %}
           <a href="{{ url_for('function', id=function.meta.id) }}">
+        {% endif %}
             {{ function.function_name }}
+        
           </a>
         </td>
+        {% if compare_to %}
+          <td>+</td>
+        
+          {% if function.function_name in compare_to_functions %}
+          <td style="background-color:{{ '#%02x%02x%02x' % (143,223,95) }}">
+          +
+          {% else %}
+          <td style="background-color:{{ '#%02x%02x%02x' % (233,128,128) }}">
+          -
+          {% endif %}
+          </td>
+        {% endif %}
       </tr>
     {% endfor %}
   </tbody>

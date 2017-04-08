@@ -17,6 +17,7 @@ from flask import Flask
 from flask_restful import Resource, Api
 
 import runsystem.server.instance
+import runsystem.server.ui.globals
 import runsystem.server.ui.views
 from runsystem.server.ui.api import load_api_resources
 
@@ -157,5 +158,7 @@ def create_jinja_environment(env=None):
     if env is None:
         env = jinja2.Environment(loader=jinja2.PackageLoader(
                 'runsystem.server.ui', 'templates'))
+
+    runsystem.server.ui.globals.register(env)
 
     return env

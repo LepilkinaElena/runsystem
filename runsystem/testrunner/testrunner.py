@@ -155,6 +155,8 @@ def mkdir_p(path):
             raise
 
 class TestRunner(object):
+    def __init__(self):
+        self._runs = (None, None)
 
     def describe(self):
         return "LLVM test-suite"
@@ -215,8 +217,8 @@ class TestRunner(object):
                          help=("autosubmit the test result to the given server"
                                " (or local instance) [%default]"),
                          type=str, default=None)
-        group.add_option("", "--runs", dest="runs", type=str, metavar="[Optimization Options]",
-                         default = "-O0 -O1 -O2 -O3 -Ofast -Os -Oz",
+        group.add_option("", "--run_options", dest="run", type=str, metavar="[Optimization Options]",
+                         default = "-O3",
                          help="Optimization options for run tests")
         group.add_option("", "--ml-options", dest="mloptions", 
                          type=str, metavar="[ML Options]", default=None,
@@ -311,22 +313,30 @@ class TestRunner(object):
         if not os.path.exists(path):
             mkdir_p(path)
 
-        opt_run_options = self.opts.runs.split(" ")
-        # Create folder for each run optimize option.
-        for option in opt_run_options:
-            path = os.path.join(self._base_path, option)
-            mkdir_p(path)
-            path_default = os.path.join(path, "default")
-            mkdir_p(path_default)
-            path_mlopt = os.path.join(path, self.opts.mloptions)
+        opt_run_options = self.opts.runs
+        # Create folder for each run optimize option.    
+        path = os.path.join(self._base_path, opt_run_options.replace(' ', '_'))
+        mkdir_p(path)
+        path_default = os.path.join(path, "default")
+        mkdir_p(path_default)
+        self.run(path_default, opt_run_options)
+
+        if opts.mloptions:
+            path_mlopt = os.path.join(path, self.opts.mloptions.replace(' ', '_'))
             mkdir_p(path_mlopt)
-            self.run(path_default, option)
-            #self.run(path_mlopt, option, self.opts.mloptions)
+            self.run(path_mlopt, opt_run_options, self.opts.mloptions)
+        # If compared runs used, connect two runs.
+        if self._runs[0] and self._runs[1]:
+            self._runs[0].connected_run_id = self._runs[1].meta.id
+            self._runs[1].connected_run_id = self._runs[0].meta.id
+            self._runs[0].save()
+            self._runs[1].save()
 
     def run(self, path, opt_option, mloptions = ""):
         self._configure(path, opt_option, mloptions)
         self._clean(path)
         self._make(path)
+        print(path)
         self._run_tests(path, ' '.join((opt_option, mloptions)).rstrip())
 
     def _unix_quote_args(self, s):
@@ -455,6 +465,10 @@ class TestRunner(object):
     def _run_tests(self, path, options):
         run = data.Run(date_time=self.ts, options=options)
         run.save()
+        if not self._runs[0]:
+            self._runs = (run, None)
+        else:
+            self._runs = (self._runs[0], run)
         for dirpath,dirnames,filenames in os.walk(path,
                                                   followlinks = True):
             if 'CMakeFiles' in dirnames:
@@ -528,9 +542,10 @@ class TestRunner(object):
                               function_id = function.meta.id)
             #print("%s, %s, %s" % (key, value[1], value[2]))
             block.save()
-            for cur_feature in typed_features[block_id]:
-                cur_feature.block_id = block.meta.id
-                cur_feature.save()
+            if block_id in typed_features:
+                for cur_feature in typed_features[block_id]:
+                    cur_feature.block_id = block.meta.id
+                    cur_feature.save()
 
     def _profile(self, log_file, run_line, application, offset_files):
         locals = globals = {}
@@ -563,6 +578,8 @@ class TestRunner(object):
                   "subclass) for: %r" % module_path)
 
         try:
+            print("\n")
+            note("Start profiling %s\n" % application)
             results = profiler_instance._run(log_file, run_line, self.opts.profiler_path, 
                                     application, offset_files, self.args)
         except:

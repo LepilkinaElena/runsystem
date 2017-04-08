@@ -1,7 +1,26 @@
 {% import "utils.html" as utils %}
 {% extends "layout.html" %}
 {% set components = [] %}
+{% set compare_to = request_info.compare_to %}
+{% set connected_run = request_info.connected_run %}
+{% set current_run = request_info.current_run %}
+{% set closest_runs = request_info.closest_runs %}
+{% block head %}
+<style type="text/css">
+  p {
+    font-style: italic;
+    font-size: 12px;
+    font-weight: normal;
+  }
+  .table thead th {
+    vertical-align: middle;
+  }
+</style>
+{% endblock %}
 {% block title %}Overview{% endblock %}
+{% block sidebar %}
+{{ utils.render_sidebar(connected_run, closest_runs) }}
+{% endblock %}
 {% block body %}
 {# Display available test result suites. #}
 <h3>Function {{function.function_name}} in program {{function.application}} (file {{function.filename}})</h3>
@@ -10,10 +29,26 @@
 <table class="table table-striped table-hover table-condensed sortable">
   <thead>
     <tr>
-      <th rowspan="1" class="sorttable_nosort"><input type="checkbox" id="select-all-runs" onClick="selectAll(this)"></th>
-      <th rowspan="1">loop_name</th>
+      {% set rowsize =  1 %}
+      {% if compare_to %}
+        {% set rowsize = 2 %}
+      {% endif %}
+      <th rowspan="{{rowsize}}" class="sorttable_nosort">
+        <input type="checkbox" id="select-all-runs" onClick="selectAll(this)">
+      </th>
+      <th rowspan="{{rowsize}}">loop_name</th>
+      {% if compare_to %}
+        <th colspan="2" style="text-align: center">{{current_run.options}}<br><p>(Current run)</p></th>
+        <th colspan="2" style="text-align: center">{{compare_to.options}}<br><p>(Compare to run)</p></th>
+        </tr>
+        <tr>
+      {% endif %}
       <th rowspan="1">Code size</th>
       <th rowspan="1">Execution time</th>
+      {% if compare_to %}
+        <th rowspan="1">Code size</th>
+        <th rowspan="1">Execution time</th>
+      {% endif %}
     </tr>
   </thead>
   <tbody class="searchable">
@@ -22,12 +57,29 @@
       <tr>
         <td><input type="checkbox" name="plot.{{loop_name.meta.id}}" value="{{loop_name.meta.id}}"></td>
         <td class="benchmark-name">
-          <a href="{{ url_for('loop', id=loop_name.meta.id) }}">
+          {% if compare_to %}
+            <a href="{{ url_for('loop', id=loop_name.meta.id, compare_to=compare_to.meta.id,
+                                compared_loop=compare_to_loops[loop_name.loop_id].meta.id) }}">
+          {% else %}
+            <a href="{{ url_for('loop', id=loop_name.meta.id) }}">
+          {% endif %}
             {{ loop_name.loop_id }}
           </a>
         </td>
-        <td>{{loop_name.code_size}}</td>
-        <td>{{loop_name.exec_time}}</td>
+        {% if compare_to %}
+          <td>{{loop_name.code_size}}</td>
+          <td>{{loop_name.exec_time}}</td>
+          {% if loop_name.loop_id in compare_to_loops %}
+            <td>{{compare_to_loops[loop_name.loop_id].code_size}}</td>
+            <td>{{compare_to_loops[loop_name.loop_id].exec_time}}</td>
+          {% else %}
+            <td style="background-color:{{ '#%02x%02x%02x' % (233,128,128) }}">-</td>
+            <td style="background-color:{{ '#%02x%02x%02x' % (233,128,128) }}">-</td>
+          {% endif %}
+        {% else %}
+          <td>{{loop_name.code_size}}</td>
+          <td>{{loop_name.exec_time}}</td>
+        {% endif %}
       </tr>
     {% endfor %}
   </tbody>

@@ -1,4 +1,4 @@
-#content { margin-top:97px; }
+#content { margin-top:90px; }
 #header { position: fixed;}
-#page-content { float: left; width: 81%; height: 100%; margin-left: 19%; }
-#side-bar { width: 16%; height: 100%; position: fixed; margin-left: 20px; }
+#page-content { float: left; width: 78%; height: 100%; margin-left: 22%; }
+#side-bar { width: 19%; height: 100%; position: absolute; margin-left: 20px; }

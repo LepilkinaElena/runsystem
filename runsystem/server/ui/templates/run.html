@@ -1,10 +1,28 @@
 {% import "utils.html" as utils %}
 {% extends "layout.html" %}
 {% set components = [] %}
-{% block title %}Overview{% endblock %}
+{% set compare_to = request_info.compare_to %}
+{% set connected_run = request_info.connected_run %}
+{% set closest_runs = request_info.closest_runs %}
+{% block head %}
+<style type="text/css">
+  p {
+    font-style: italic;
+    font-size: 12px;
+    font-weight: normal;
+  }
+  .table thead th {
+    vertical-align: middle;
+  }
+</style>
+{% endblock %}
+{% block title %}{% endblock %}
+{% block sidebar %}
+{{ utils.render_sidebar(connected_run, closest_runs) }}
+{% endblock %}
 {% block body %}
 {# Display available test result suites. #}
-<h3>Run {{run.date_time}}</h3>
+<h3>Run {{run.date_time}}<br> Options: {{run.options}}</h3>
 
 <section id="programs">
 {{ utils.render_popup_begin('programs', 'Programs', false) }}
@@ -14,6 +32,10 @@
       <th rowspan="1" class="sorttable_nosort"><input type="checkbox" id="select-all-runs" onClick="selectAll(this)"></th>
       <th rowspan="1">Program</th>
       <th>Files</th>
+      {% if compare_to %}
+        <th>{{run.options}}<br><p>(Current run)</p></th>
+        <th>{{compare_to.options}}<br><p>(Compare to run)</p></th>
+      {% endif %}
     </tr>
   </thead>
   <tbody class="searchable">
@@ -22,7 +44,11 @@
       <tr>
         <td><input type="checkbox" name="plot.{{run.meta.id}}" value="{{run.meta.id}}"></td>
         <td class="benchmark-name">
-          <a href="{{ url_for('program', name=application_name, id=run.meta.id) }}">
+          {% if compare_to %}
+            <a href="{{ url_for('program', name=application_name, id=run.meta.id, compare_to=compare_to.meta.id) }}">
+          {% else %}
+            <a href="{{ url_for('program', name=application_name, id=run.meta.id) }}">
+          {% endif %}
             {{ application_name }}
           </a>
         </td>
@@ -34,6 +60,19 @@
         </ul>
         
         </td>
+        {% if compare_to %}
+          <td>+</td>
+        
+          {% if application_name in compare_to_applications %}
+          <td style="background-color:{{ '#%02x%02x%02x' % (143,223,95) }}">
+          +
+          {% else %}
+          <td style="background-color:{{ '#%02x%02x%02x' % (233,128,128) }}">
+          -
+          {% endif %}
+          </td>
+        {% endif %}
+        
       </tr>
     {% endfor %}
   </tbody>

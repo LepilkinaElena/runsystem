@@ -73,7 +73,7 @@ class Function(DocType):
     """ Database entity for function."""
     application = Keyword()
     filename = Keyword()
-    function_name = Keyword()
+    function_name = Keyword(store=True)
     run_id = Keyword()
 
     class Meta:
@@ -91,12 +91,11 @@ class Function(DocType):
 
         response = search.execute()
         if response.success() and len(response):
-            print(response)
             return response[0]
         function = Function(application = application,
-                                 run_id = run_id, 
-                                 filename = filename, 
-                                 function_name = function_name)
+                            run_id = run_id, 
+                            filename = filename, 
+                            function_name = function_name)
         function.save()
         return function
 
@@ -104,6 +103,7 @@ class Run(DocType):
     """Database entity for run of system."""
     options = Text()
     date_time = Text()
+    connected_run_id = Keyword()
 
     class Meta:
         index = 'runsystemdb'
