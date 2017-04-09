@@ -48,7 +48,16 @@ class Features(DocType):
             'numIntToFloatCast': Integer(),
             'hasLoopPreheader': Boolean(),
             'numTermBrBlocks': Integer(),
-            'latchBlockTermOpcode': Integer()
+            'latchBlockTermOpcode': Integer(),
+            'numCalls': Integer(),
+            'notDuplicatable': Boolean(),
+            'convergent': Boolean(),
+            'loopSize': Integer(),
+            'tripCount': Integer(),
+            'tripMultiply': Integer(),
+            'termByCondBr': Boolean(),
+            'headerAddressTaken': Boolean(),
+            'PHINodesInExitBlocks': Boolean()
         }
     )
 

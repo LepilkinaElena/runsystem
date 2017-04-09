@@ -217,7 +217,7 @@ class TestRunner(object):
                          help=("autosubmit the test result to the given server"
                                " (or local instance) [%default]"),
                          type=str, default=None)
-        group.add_option("", "--run_options", dest="run", type=str, metavar="[Optimization Options]",
+        group.add_option("", "--run-options", dest="run_options", type=str, metavar="[Optimization Options]",
                          default = "-O3",
                          help="Optimization options for run tests")
         group.add_option("", "--ml-options", dest="mloptions", 
@@ -313,7 +313,7 @@ class TestRunner(object):
         if not os.path.exists(path):
             mkdir_p(path)
 
-        opt_run_options = self.opts.runs
+        opt_run_options = self.opts.run_options
         # Create folder for each run optimize option.    
         path = os.path.join(self._base_path, opt_run_options.replace(' ', '_'))
         mkdir_p(path)
@@ -321,7 +321,7 @@ class TestRunner(object):
         mkdir_p(path_default)
         self.run(path_default, opt_run_options)
 
-        if opts.mloptions:
+        if self.opts.mloptions:
             path_mlopt = os.path.join(path, self.opts.mloptions.replace(' ', '_'))
             mkdir_p(path_mlopt)
             self.run(path_mlopt, opt_run_options, self.opts.mloptions)
