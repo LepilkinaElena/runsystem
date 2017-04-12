@@ -79,7 +79,11 @@
       </tr>
     {% endfor %}
   {% else %}
-    {% set properties = features_sets[0][0].features_set._doc_type.mapping._d_.keys() %}
+    {% if features_sets %}
+      {% set properties = features_sets[0][0].features_set._doc_type.mapping._d_.keys() %}
+    {% else %}
+      {% set properties = [] %}
+    {% endif %}
     <tr>
       <th rowspan="1">Pass</th>
       <th rowspan="1">Place</th>

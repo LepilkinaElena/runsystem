@@ -500,10 +500,10 @@ class TestRunner(object):
                         #code_size_results = LoopCodeSizeCounter().run(offset_files, filename)
                         #print(code_size_results)
                         log_file = os.path.join(dirpath, filename + ".asm.oprof")
-                        time_results = self._profile(log_file, run_line, filename, offset_files)
-                        #print(time_results)
+                        metrics_results = self._profile(log_file, run_line, filename, offset_files)
+                        #print(metrics_results)
                         features = self._parse_features_output(features_output_files)
-                        self.save_results(run, features, time_results)
+                        self.save_results(run, features, metrics_results)
 
 
     def _parse_features_output(self, output_files):
@@ -518,7 +518,7 @@ class TestRunner(object):
                         cur_json_string = ""
         return result
 
-    def save_results(self, run, features, time_results):
+    def save_results(self, run, features, metrics_results):
         typed_features = {}
         # Save static features.
         for features_set in features:
@@ -528,7 +528,7 @@ class TestRunner(object):
             if not typed_instance.block_id in typed_features:
                 typed_features[typed_instance.block_id] = []
             typed_features[typed_instance.block_id].append(typed_instance)
-        for key, value in time_results.iteritems():
+        for key, value in metrics_results.iteritems():
             keys_parts = key.split('.')
 
             function = data.Function.get_ot_create_function(application = keys_parts.pop(0),
@@ -539,6 +539,7 @@ class TestRunner(object):
             block = data.Loop(loop_id = block_id, 
                               exec_time = value[1],
                               code_size = value[2],
+                              llc_misses = value[3],
                               function_id = function.meta.id)
             #print("%s, %s, %s" % (key, value[1], value[2]))
             block.save()

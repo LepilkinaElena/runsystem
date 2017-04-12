@@ -38,16 +38,18 @@
       </th>
       <th rowspan="{{rowsize}}">loop_name</th>
       {% if compare_to %}
-        <th colspan="2" style="text-align: center">{{current_run.options}}<br><p>(Current run)</p></th>
-        <th colspan="2" style="text-align: center">{{compare_to.options}}<br><p>(Compare to run)</p></th>
+        <th colspan="3" style="text-align: center">{{current_run.options}}<br><p>(Current run)</p></th>
+        <th colspan="3" style="text-align: center">{{compare_to.options}}<br><p>(Compare to run)</p></th>
         </tr>
         <tr>
       {% endif %}
       <th rowspan="1">Code size</th>
       <th rowspan="1">Execution time</th>
+      <th rowspan="1">LLC misses</th>
       {% if compare_to %}
         <th rowspan="1">Code size</th>
         <th rowspan="1">Execution time</th>
+        <th rowspan="1">LLC misses</th>
       {% endif %}
     </tr>
   </thead>
@@ -57,7 +59,7 @@
       <tr>
         <td><input type="checkbox" name="plot.{{loop_name.meta.id}}" value="{{loop_name.meta.id}}"></td>
         <td class="benchmark-name">
-          {% if compare_to %}
+          {% if compare_to and loop_name.loop_id in compare_to_loops %}
             <a href="{{ url_for('loop', id=loop_name.meta.id, compare_to=compare_to.meta.id,
                                 compared_loop=compare_to_loops[loop_name.loop_id].meta.id) }}">
           {% else %}
@@ -69,16 +71,20 @@
         {% if compare_to %}
           <td>{{loop_name.code_size}}</td>
           <td>{{loop_name.exec_time}}</td>
+          <td>{{loop_name.llc_misses}}</td>
           {% if loop_name.loop_id in compare_to_loops %}
             <td>{{compare_to_loops[loop_name.loop_id].code_size}}</td>
             <td>{{compare_to_loops[loop_name.loop_id].exec_time}}</td>
+            <td>{{compare_to_loops[loop_name.loop_id].llc_misses}}</td>
           {% else %}
+            <td style="background-color:{{ '#%02x%02x%02x' % (233,128,128) }}">-</td>
             <td style="background-color:{{ '#%02x%02x%02x' % (233,128,128) }}">-</td>
             <td style="background-color:{{ '#%02x%02x%02x' % (233,128,128) }}">-</td>
           {% endif %}
         {% else %}
           <td>{{loop_name.code_size}}</td>
           <td>{{loop_name.exec_time}}</td>
+          <td>{{loop_name.llc_misses}}</td>
         {% endif %}
       </tr>
     {% endfor %}

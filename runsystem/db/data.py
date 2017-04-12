@@ -125,6 +125,7 @@ class Loop(DocType):
     loop_id = Keyword()
     exec_time = Integer()
     code_size = Integer()
+    llc_misses = Integer()
     function_id = Keyword()
 
     class Meta:

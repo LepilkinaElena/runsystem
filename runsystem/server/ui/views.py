@@ -45,6 +45,7 @@ class CompareRequestInfo(object):
     def __init__(self, run):
         self.current_run = run
         self.connected_run = None
+        self.compared_loop = None
         if self.current_run.connected_run_id:
             self.connected_run = db.Run.get(id=self.current_run.connected_run_id, ignore=404)
         # Find closest runs.
@@ -166,7 +167,24 @@ def loop(id):
     # Find loop features.
     result_features = get_loop_features_set(loop)
    
-    if request_info.compare_to and request_info.compared_loop:
+    if request_info.compare_to:
+        if not request_info.compared_loop:
+            # Find same loop.
+            
+            s = db.Function.search().\
+                                   query('match', run_id=request_info.compare_to.meta.id).\
+                                   query('match', function_name=function.function_name).\
+                                   query('match', application=function.application).\
+                                   query('match', filename=function.filename)
+            response = s.execute()
+            if response.success() and len(response):
+                compare_to_function = response[0]
+                s = db.Loop.search().query('match', function_id=compare_to_function.meta.id).\
+                                     query('match', loop_id=loop.loop_id)
+                                                    
+                response_loops = s.execute()
+                if len(response_loops) == 1:
+                    request_info.compared_loop = response_loops[0]
         compared_loop_features = get_loop_features_set(request_info.compared_loop)
         runs_features_sets = itertools.izip_longest(result_features, compared_loop_features)
     return render_template("loop.html", loop=loop, 
