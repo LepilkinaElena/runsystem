@@ -1,0 +1,122 @@
+{% set nosidebar = True %}
+{% set components = [] %}
+{% import "utils.html" as utils %}
+{% extends "layout.html" %}
+
+{% block head %}
+  <script src="{{ url_for('.static', filename='popup.js') }}"></script>
+  <script src="{{ url_for('.static', filename='sorttable.js') }}"></script>
+  <script language="javascript" type="text/javascript"
+          src="{{ url_for('.static',
+                          filename='flot/jquery.flot.min.js') }}"> </script>
+  <script language="javascript" type="text/javascript"
+           src="{{ url_for('.static',
+                          filename='flot/jquery.flot.symbol.min.js') }}"> </script>
+  <script language="javascript" type="text/javascript"
+          src="{{ url_for('.static',
+                          filename='flot/jquery.flot.errorbars.min.js') }}"> </script>
+  <script language="javascript" type="text/javascript"
+          src="{{ url_for('.static',
+                          filename='flot/jquery.flot.navigate.min.js') }}"> </script>
+  <script language="javascript" type="text/javascript"
+          src="{{ url_for('.static',
+                          filename='flot/jquery.flot.selection.min.js') }}"> </script>
+  <script language="javascript" type="text/javascript"
+          src="{{ url_for('.static',
+                          filename='flot/jquery.flot.highlight.min.js') }}"></script>
+  <script language="javascript" type="text/javascript"
+          src="{{ url_for('.static',
+                          filename='flot/jquery.flot.touch.min.js') }}"></script>
+{% endblock %}
+
+{% block title %}Loop Info for function {{function.function_name}}{% endblock %}
+
+{# Add JS to initialize the graph. #}
+{% block onload %}init_page(){% endblock %}
+
+{% block javascript %}
+var codesize_results = {{codesize_results|tojson|safe}};
+var exec_time_results = {{exec_time_results|tojson|safe}};
+var llc_misses_results = {{llc_misses_results|tojson|safe}};
+
+function init_graph() {
+  // Set up the primary graph.
+  var graph = $("#code_size_graph");
+  var graph_options = {
+      xaxis:{
+        ticks: {{loop_names|tojson|safe}}
+      },
+      series : {
+        lines : {
+          lineWidth : 2 },
+          shadowSize : 0
+        },
+      zoom : { interactive : false },
+      pan : { interactive : true,
+              frameRate: 60 },
+      grid : {
+        hoverable : true,
+        clickable: true }
+      };
+
+  // Add baseline lines
+  var code_size_plot = $.plot(graph, codesize_results, graph_options);
+  graph = $("#cycles_count_graph");
+  var cycles_count_plot = $.plot(graph, exec_time_results, graph_options);
+  graph = $("#llc_misses_graph");
+  var cycles_count_plot = $.plot(graph, llc_misses_results, graph_options);
+  //bind_zoom_bar(main_plot);
+  
+}
+
+
+function init_page() {
+    init_graph();
+    //init_axis();
+}
+
+{% endblock %}
+
+{% block body %}
+<h3>Loop Info for function {{function.function_name}}</h3>
+  <table width="95%">
+  <tr>
+    <td><h4>Code size</h4></td>
+  </tr>
+
+  <tr>
+        <td colspan="1">
+            <div id="graphbox" style="margin-left:20px">
+                <div id="code_size_graph" style="height:300px"></div>
+            </div>
+        </td>
+    </tr>
+
+  <tr>
+    <td><h4>Cycles count</h4></td>
+  </tr>
+
+  <tr>
+        <td colspan="1">
+            <div id="graphbox" style="margin-left:20px">
+                <div id="cycles_count_graph" style="height:300px"></div>
+            </div>
+        </td>
+    </tr>
+
+  <tr>
+    <td><h4>LLC misses</h4></td>
+  </tr>
+
+  <tr>
+        <td colspan="1">
+            <div id="graphbox" style="margin-left:20px">
+                <div id="llc_misses_graph" style="height:300px"></div>
+            </div>
+        </td>
+    </tr>
+  
+
+</table>
+  
+{% endblock %}

@@ -10,7 +10,7 @@ from elasticsearch_dsl.connections import connections
 class FeaturesFactory(object):
     """Class for creating features from llvm description."""
     @staticmethod
-    def createFeatures(description):
+    def createFeatures(description, order = 0):
         features_desc = json.loads(description)
         features_classes = {
             'loop' :'LoopFeatures'
@@ -23,6 +23,7 @@ class FeaturesFactory(object):
             features.place = pass_string_list.pop(0)
             features.pass_name = ' '.join(pass_string_list)
             features.features_set = features_desc['features']
+            typed_features.order = order
         return (features, typed_features)
 
 class FeaturesSet(InnerObjectWrapper):
@@ -71,6 +72,7 @@ class LoopFeatures(DocType):
     """ Database entity for loop static features."""
     block_id = Keyword()
     features_id = Keyword()
+    order = Integer()
 
     class Meta:
         index = 'runsystemdb'

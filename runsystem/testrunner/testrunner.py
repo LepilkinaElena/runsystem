@@ -521,13 +521,15 @@ class TestRunner(object):
     def save_results(self, run, features, metrics_results):
         typed_features = {}
         # Save static features.
+        order = 0
         for features_set in features:
-            features_instance, typed_instance = data.FeaturesFactory.createFeatures(features_set)
+            features_instance, typed_instance = data.FeaturesFactory.createFeatures(features_set, order)
             features_instance.save()
             typed_instance.features_id = features_instance.meta.id
             if not typed_instance.block_id in typed_features:
                 typed_features[typed_instance.block_id] = []
             typed_features[typed_instance.block_id].append(typed_instance)
+            order += 1
         for key, value in metrics_results.iteritems():
             keys_parts = key.split('.')
 

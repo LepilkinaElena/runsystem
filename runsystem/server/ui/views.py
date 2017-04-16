@@ -112,16 +112,7 @@ def program(name, id):
                                            request_info=request_info, 
                                            compare_to_functions=compare_to_functions)
 
-@frontend.route("/function/<id>")
-def function(id):
-    function = db.Function.get(id=id)
-    s = db.Loop.search().query('match', function_id=id)
-    s = s[0:10000]
-    loops = s.execute()
-
-    run = db.Run.get(id=function.run_id)
-    request_info = CompareRequestInfo(run)
-
+def get_compare_to_loops(request_info, function):
     compare_to_loops = {}
     if request_info.compare_to:
         s = db.Function.search().\
@@ -138,13 +129,26 @@ def function(id):
             response_loops = s.execute()
             for loop in response_loops:
                 compare_to_loops[loop.loop_id] = loop 
+    return compare_to_loops
+
+@frontend.route("/function/<id>")
+def function(id):
+    function = db.Function.get(id=id)
+    s = db.Loop.search().query('match', function_id=id)
+    s = s[0:10000]
+    loops = s.execute()
+
+    run = db.Run.get(id=function.run_id)
+    request_info = CompareRequestInfo(run)
+
+    compare_to_loops = get_compare_to_loops(request_info, function)
     return render_template("function.html", function=function, loops=loops,
                                             request_info=request_info, 
                                             compare_to_loops=compare_to_loops)
 
 def get_loop_features_set(loop):
     # Find loop features.
-    s = db.LoopFeatures.search().query('match', block_id=loop.meta.id)
+    s = db.LoopFeatures.search().query('match', block_id=loop.meta.id).sort('order')
     s = s[0:10000]
     loop_features = s.execute()
     features_sets = {}
@@ -191,3 +195,49 @@ def loop(id):
                            features_sets=result_features,
                            request_info=request_info,
                            runs_features_sets=runs_features_sets)
+
+@frontend.route("/graph/<loop_id>/<run_id>")
+def graph(loop_id, run_id):
+    loop = db.Loop.get(id=loop_id)
+    return render_template("graph.html", loop=loop)
+
+@frontend.route("/loop_graph/<function_id>")
+def loop_graph(function_id):
+    function = db.Function.get(id=function_id)
+    s = db.Loop.search().query('match', function_id=function_id)
+    s = s[0:10000]
+    loops = s.execute()
+
+    run = db.Run.get(id=function.run_id)
+    request_info = CompareRequestInfo(run)
+
+    compare_to_loops = get_compare_to_loops(request_info, function)
+
+    codesize_data = []
+    exec_data = []
+    llc_misses_data = []
+
+    compare_codesize_data = []
+    compare_exec_data = []
+    compare_llc_misses_data = []
+
+    loop_names = []
+    for x, cur_loop in zip(range(0, len(loops)), loops):
+        codesize_data.append((x, cur_loop.code_size))
+        exec_data.append((x, cur_loop.exec_time))
+        llc_misses_data.append((x, cur_loop.llc_misses))
+        loop_names.append([x, cur_loop.loop_id])
+        if cur_loop.loop_id in compare_to_loops:
+            compare_codesize_data.append((x, compare_to_loops[cur_loop.loop_id].code_size))
+            compare_exec_data.append((x, compare_to_loops[cur_loop.loop_id].exec_time))
+            compare_llc_misses_data.append((x, compare_to_loops[cur_loop.loop_id].llc_misses))
+    codesize_results = [{'label':run.options, 'data':codesize_data}]
+    exec_time_results = [{'label':run.options, 'data':exec_data}]
+    llc_misses_results = [{'label':run.options, 'data':llc_misses_data}]
+    if request_info.compare_to:
+        codesize_results.append({'label':request_info.compare_to.options, 'data':compare_codesize_data})
+        exec_time_results.append({'label':request_info.compare_to.options, 'data':compare_exec_data})
+        llc_misses_results.append({'label':request_info.compare_to.options, 'data':compare_llc_misses_data})
+    return render_template("graph.html", codesize_results=codesize_results, loop_names=loop_names,
+                            exec_time_results=exec_time_results, llc_misses_results=llc_misses_results,
+                            function=function)
