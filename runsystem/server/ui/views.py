@@ -54,7 +54,6 @@ class CompareRequestInfo(object):
                                   min_doc_freq=1, max_query_terms=2)
         self.closest_runs = s.execute()
         self.closest_runs = self.closest_runs [0:3]
-        print(self.closest_runs)
         self.compare_to = None
         compare_to_id = request.args.get('compare_to')
         if compare_to_id:
@@ -123,7 +122,6 @@ def get_compare_to_loops(request_info, function):
         response = s.execute()
         if response.success() and len(response):
             compare_to_function = response[0]
-            print(compare_to_function)
             s = db.Loop.search().query('match', function_id=compare_to_function.meta.id)
             s = s[0:10000]
             response_loops = s.execute()
@@ -151,13 +149,18 @@ def get_loop_features_set(loop):
     s = db.LoopFeatures.search().query('match', block_id=loop.meta.id).sort('order')
     s = s[0:10000]
     loop_features = s.execute()
+
     features_sets = {}
     features_sets['Before'] = []
     features_sets['After'] = []
+    previous_place = 'After'
     for features in loop_features:
         features_set = db.Features.get(id=features.features_id, ignore=404)
         if features_set:
+            if features_set.place == previous_place:
+                del features_sets[features_set.place][-1]
             features_sets[features_set.place].append(features_set)
+            previous_place = features_set.place
     result_features = zip(features_sets['Before'], features_sets['After'])
     return result_features
 

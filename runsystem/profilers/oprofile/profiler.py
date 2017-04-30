@@ -125,7 +125,8 @@ class Oprofile(Profiler):
                '-e', ":".join(('LLC_MISSES', str(opts.llc_num))), 
                '-e', ":".join(('CPU_CLK_UNHALTED', str(opts.count_num), "0:0:1"))]
         cmd.extend(self._run_line.split())
-        subprocess.check_call(cmd)
+        with open("/dev/null") as input_file:
+            subprocess.check_call(cmd, stdin=input_file)
 
         # opannotate --source --assembly [run_line]
         cmd = [opannotate_command, '--source', '--assembly']
