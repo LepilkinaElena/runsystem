@@ -10,13 +10,17 @@ class Oprofile(Profiler):
         time = 0
         offset = 0
         llc_misses = 0
+        instr_size = 0
 
         code_line = re.match(r'\s*(\d+)?\s+(\d+\.\d+.*)?(\s+(\d+)\s+(\d+(\.\d+)*.*))?\s*:\s*([0-9a-fA-F]+):\s*(\w+)',
                              line)
         if not code_line:
             print(prev_address)
             print(line)
-            raise SystemExit("wrong format for profiler file")
+            print("wrong format for profiler file")
+
+            return (None, offset, time, instr_size, llc_misses)
+            
         if code_line.group(1):
             time = int(code_line.group(1))
         if code_line.group(4):
@@ -50,6 +54,8 @@ class Oprofile(Profiler):
                 # Find start of block.
                 prev_address, cur_offset, time, prev_instr_size, llc_misses = \
                     self._count_instruction_offset_and_metrics(assembly_line, prev_address)
+                if not prev_address:
+                    return (time_value, code_size_value, llc_misses_value)
                 if not is_block_start_found:
                     if cur_instr_num == offset_start:
                         is_block_start_found = True

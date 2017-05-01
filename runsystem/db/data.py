@@ -2,7 +2,7 @@ import runsystem
 import json
 
 from datetime import datetime
-from elasticsearch_dsl import DocType, Integer, Keyword, Text
+from elasticsearch_dsl import DocType, Integer, Keyword, Text, Long
 from elasticsearch_dsl import InnerObjectWrapper, Nested, Boolean
 from elasticsearch_dsl import FacetedSearch, TermsFacet
 from elasticsearch_dsl.connections import connections
@@ -49,13 +49,13 @@ class Features(DocType):
             'numIntToFloatCast': Integer(),
             'hasLoopPreheader': Boolean(),
             'numTermBrBlocks': Integer(),
-            'latchBlockTermOpcode': Integer(),
+            'latchBlockTermOpcode': Long(),
             'numCalls': Integer(),
             'notDuplicatable': Boolean(),
             'convergent': Boolean(),
             'loopSize': Integer(),
             'tripCount': Integer(),
-            'tripMultiply': Integer(),
+            'tripMultiply': Long(),
             'termByCondBr': Boolean(),
             'headerAddressTaken': Boolean(),
             'PHINodesInExitBlocks': Boolean()
@@ -72,7 +72,7 @@ class LoopFeatures(DocType):
     """ Database entity for loop static features."""
     block_id = Keyword()
     features_id = Keyword()
-    order = Integer()
+    order = Long()
 
     class Meta:
         index = 'runsystemdb'
@@ -125,9 +125,9 @@ class Run(DocType):
 class Loop(DocType):
     """Database entity for loop."""
     loop_id = Keyword()
-    exec_time = Integer()
-    code_size = Integer()
-    llc_misses = Integer()
+    exec_time = Long()
+    code_size = Long()
+    llc_misses = Long()
     function_id = Keyword()
 
     class Meta:
