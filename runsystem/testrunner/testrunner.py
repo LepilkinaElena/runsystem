@@ -366,7 +366,8 @@ class TestRunner(object):
         }
         all_flags = opt_option + " " + mloptions + " -mllvm -print-features-before-all" + \
                     " -mllvm -print-features-after-all" + \
-                    " -mllvm -features-file=features.output"
+                    " -mllvm -features-file=features.output" + \
+                    " -ccc-out-bindings"
         all_cflags = all_flags
         all_cxx_flags = all_flags
         if self.opts.cppflags or self.opts.cflags:
@@ -462,6 +463,20 @@ class TestRunner(object):
                     run_line = re.match(r'RUN:\s*(.+)', line)
                     return run_line.group(1)
 
+    def _get_bindings(self, bindings_file):
+        result = []
+        if os.path.isfile(bindings_file):
+            with open(bindings_file) as parsed_file:
+                line = parsed_file.readline()
+                files = line.split(", ")
+                for filename in files:
+                    if filename.startswith('"'):
+                        filename = filename.strip('"')
+                        filename = filename.rpartition('/')[2]
+                        filename = filename.partition('.')[0]
+                        result.append(filename)
+        return result
+
     def _run_tests(self, path, options):
         run = data.Run(date_time=self.ts, options=options)
         run.save()
@@ -476,26 +491,22 @@ class TestRunner(object):
             # Check if directory has executables:
             for filename in filenames:
                 if isexecfile(os.path.join(dirpath, filename)):
-                    offset_file = os.path.join(dirpath, filename + ".functions.offset")
-                    features_output_file = os.path.join(dirpath, filename + ".features.output")
-                    offset_files = []
-                    features_output_files = []
-                    # Single source.
-                    if os.path.isfile(offset_file):
-                        offset_files.append(offset_file)
-                    if os.path.isfile(features_output_file):
-                        features_output_files.append(features_output_file)
-                    # Multi sources.
-                    else:
-                        # All offset files are connected with application.
-                        for inner_file in filenames:
-                            if inner_file.endswith(".functions.offset"):
-                                offset_files.append(os.path.join(dirpath, inner_file))
-                            if inner_file.endswith(".features.output"):
-                                features_output_files.append(os.path.join(dirpath, inner_file))
-
                     test_file = os.path.join(dirpath, filename + ".test")
                     run_line = self._extract_run_line(test_file)
+
+                    # Parse bindings.
+                    bindings_file = os.path.join(dirpath, filename + ".bindings")
+                    bind_filenames = self._get_bindings(bindings_file)
+                    offset_files = []
+                    features_output_files = []
+                    
+                    for bind_file in bind_filenames:
+                        offset_file = os.path.join(dirpath, bind_file + ".functions.offset")
+                        features_output_file = os.path.join(dirpath, bind_file + ".features.output")
+                        if os.path.isfile(offset_file):
+                            offset_files.append(offset_file)
+                        if os.path.isfile(features_output_file):
+                            features_output_files.append(features_output_file)
                     if run_line:
                         #code_size_results = LoopCodeSizeCounter().run(offset_files, filename)
                         #print(code_size_results)
